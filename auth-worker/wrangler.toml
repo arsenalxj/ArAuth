@@ -1,0 +1,13 @@
+name = "auth-worker"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "auth-db"
+database_id = "eddb61a7-40e7-4f7c-a9ab-b17ae20db0db"
+
+# Secrets (set via wrangler secret put):
+#   JWT_SECRET     — HMAC-SHA256 signing key
+#   ADMIN_INIT_KEY — one-time key to bootstrap first admin (optional)

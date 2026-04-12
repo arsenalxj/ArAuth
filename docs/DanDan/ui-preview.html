@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ArAuth 管理后台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+  <style>
+    /* ── Pico Variable Overrides ─────────────────────── */
+    :root {
+      --pico-font-family-sans-serif: 'DM Sans', system-ui, sans-serif;
+      --pico-font-family-monospace: 'Fira Code', monospace;
+      --pico-primary: #f97316;
+      --pico-primary-background: #f97316;
+      --pico-primary-border: #f97316;
+      --pico-primary-hover: #ea6900;
+      --pico-primary-hover-background: #ea6900;
+      --pico-primary-focus: rgba(249, 115, 22, 0.25);
+      --pico-primary-inverse: #fff;
+      --sidebar-width: 224px;
+    }
+
+    /* ── Body / Layout ───────────────────────────────── */
+    html, body { height: 100%; margin: 0; padding: 0; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Login state */
+    body.is-login {
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    /* Dashboard state */
+    body.is-admin {
+      flex-direction: row;
+      align-items: stretch;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-width);
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--pico-muted-border-color);
+      background: var(--pico-background-color);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar-header {
+      padding: 1.375rem 1.125rem 1rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+    }
+
+    .logo-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .logo-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--pico-primary);
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+
+    .logo-name {
+      font-size: 1.0625rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+    }
+
+    .logo-sub {
+      font-size: 0.6875rem;
+      color: var(--pico-muted-color);
+      display: block;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      padding: 0.875rem 0.75rem;
+    }
+
+    .nav-label {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 600;
+      color: var(--pico-muted-color);
+      padding: 0 0.5rem;
+      margin: 0.75rem 0 0.3rem;
+      display: block;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      width: 100%;
+      padding: 0.5rem 0.625rem;
+      border: none;
+      background: transparent;
+      color: var(--pico-muted-color);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s, color 0.12s;
+      margin-bottom: 2px;
+    }
+
+    .nav-btn:hover {
+      background: var(--pico-card-background-color);
+      color: var(--pico-color);
+    }
+
+    .nav-btn.active {
+      background: rgba(249, 115, 22, 0.1);
+      color: #f97316;
+    }
+
+    .nav-ico {
+      width: 1.125rem;
+      height: 1.125rem;
+      flex-shrink: 0;
+      opacity: 0.75;
+    }
+
+    .nav-btn.active .nav-ico { opacity: 1; }
+
+    .nav-count {
+      margin-left: auto;
+      font-size: 0.6875rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 99px;
+    }
+
+    .nav-count.orange { background: rgba(249,115,22,0.15); color: #f97316; }
+    .nav-count.cyan   { background: rgba(6,182,212,0.15);  color: #06b6d4; }
+
+    .sidebar-footer {
+      padding: 0.875rem 0.75rem;
+      border-top: 1px solid var(--pico-muted-border-color);
+    }
+
+    .admin-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.625rem;
+      border-radius: 8px;
+      background: var(--pico-card-background-color);
+    }
+
+    .admin-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--pico-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .admin-name  { font-size: 0.8125rem; font-weight: 600; line-height: 1.3; }
+    .admin-role  { font-size: 0.6875rem; color: var(--pico-muted-color); }
+
+    /* ── Main Pane ───────────────────────────────────── */
+    .main-pane {
+      flex: 1;
+      overflow-y: auto;
+      min-width: 0;
+    }
+
+    .page-head {
+      padding: 1.625rem 2rem 1.125rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .page-title {
+      margin: 0;
+      font-size: 1.375rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+    }
+
+    .page-sub {
+      margin: 0.2rem 0 0;
+      font-size: 0.875rem;
+      color: var(--pico-muted-color);
+    }
+
+    .page-body { padding: 1.75rem 2rem; }
+
+    /* ── Views ───────────────────────────────────────── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Stat Cards ──────────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--pico-card-background-color);
+      border: 1px solid var(--pico-card-border-color);
+      border-radius: var(--pico-border-radius);
+      padding: 1.125rem 1.375rem 1.25rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+
+    .stat-card.c-orange::after { background: #f97316; }
+    .stat-card.c-cyan::after   { background: #06b6d4; }
+    .stat-card.c-green::after  { background: #10b981; }
+    .stat-card.c-violet::after { background: #8b5cf6; }
+
+    .stat-lbl {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--pico-muted-color);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-val {
+      font-size: 2.125rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+      line-height: 1;
+      font-family: var(--pico-font-family-monospace);
+      margin-bottom: 0.375rem;
+    }
+
+    .stat-hint {
+      font-size: 0.75rem;
+      color: var(--pico-muted-color);
+    }
+
+    .up   { color: #10b981; }
+    .warn { color: #f97316; }
+    .err  { color: #ef4444; }
+
+    /* ── Section Card ────────────────────────────────── */
+    .card {
+      background: var(--pico-card-background-color);
+      border: 1px solid var(--pico-card-border-color);
+      border-radius: var(--pico-border-radius);
+      overflow: hidden;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-head {
+      padding: 0.875rem 1.375rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .card-title {
+      font-size: 0.9375rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    /* ── Tables ──────────────────────────────────────── */
+    .card table { margin: 0; }
+
+    th {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      font-weight: 600;
+      color: var(--pico-muted-color);
+    }
+
+    td { font-size: 0.875rem; vertical-align: middle; }
+
+    /* ── Badges ──────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+    }
+
+    .badge.ok     { background: rgba(16,185,129,0.12); color: #10b981; }
+    .badge.ok .dot { background: #10b981; }
+
+    .badge.off    { background: rgba(239,68,68,0.12);  color: #ef4444; }
+    .badge.off .dot { background: #ef4444; }
+
+    .badge.lock   { background: rgba(249,115,22,0.12); color: #f97316; }
+    .badge.lock .dot { background: #f97316; }
+
+    /* ── Key Pills ───────────────────────────────────── */
+    .key {
+      font-family: var(--pico-font-family-monospace);
+      font-size: 0.775rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: 5px;
+      padding: 0.2rem 0.5rem;
+      max-width: 190px;
+      display: inline-block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+
+    .copy-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0.15rem 0.3rem;
+      border-radius: 4px;
+      color: var(--pico-muted-color);
+      font-size: 0.75rem;
+      transition: all 0.12s;
+      vertical-align: middle;
+    }
+
+    .copy-btn:hover { color: var(--pico-color); background: rgba(255,255,255,0.06); }
+
+    /* ── Action Group ────────────────────────────────── */
+    .acts { display: flex; gap: 0.375rem; flex-wrap: nowrap; }
+
+    .acts button {
+      padding: 0.25rem 0.7rem;
+      font-size: 0.8125rem;
+      white-space: nowrap;
+    }
+
+    /* ── Toolbar ─────────────────────────────────────── */
+    .toolbar {
+      padding: 0.875rem 1.375rem;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .toolbar input[type="search"] {
+      margin: 0;
+      font-size: 0.875rem;
+      max-width: 260px;
+    }
+
+    .toolbar select {
+      margin: 0;
+      font-size: 0.875rem;
+      width: auto;
+      padding-top: 0.4rem;
+      padding-bottom: 0.4rem;
+    }
+
+    /* ── Activity Feed ───────────────────────────────── */
+    .feed { padding: 0 1.375rem; }
+
+    .feed-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.8rem 0;
+      border-bottom: 1px solid var(--pico-muted-border-color);
+      font-size: 0.875rem;
+    }
+
+    .feed-item:last-child { border-bottom: none; }
+
+    .feed-ico {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      background: var(--pico-card-background-color);
+      border: 1px solid var(--pico-muted-border-color);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8125rem;
+      flex-shrink: 0;
+    }
+
+    .feed-main { flex: 1; }
+    .feed-user { font-weight: 600; }
+    .feed-time { font-size: 0.7rem; color: var(--pico-muted-color); margin-top: 0.1rem; }
+
+    /* ── Progress mini ───────────────────────────────── */
+    .bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8125rem;
+      font-family: var(--pico-font-family-monospace);
+    }
+
+    .bar-wrap progress {
+      flex: 1;
+      height: 5px;
+      margin: 0;
+    }
+
+    /* ── Secret Alert ────────────────────────────────── */
+    .secret-box {
+      background: rgba(249,115,22,0.07);
+      border: 1px solid rgba(249,115,22,0.3);
+      border-radius: var(--pico-border-radius);
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.875rem;
+    }
+
+    .secret-box strong { color: #f97316; }
+
+    .secret-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+    }
+
+    .secret-field-label {
+      font-size: 0.7rem;
+      color: var(--pico-muted-color);
+      margin-bottom: 0.25rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .secret-val {
+      font-family: var(--pico-font-family-monospace);
+      font-size: 0.775rem;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: 6px;
+      padding: 0.4rem 0.625rem;
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ── Login Page ──────────────────────────────────── */
+    .login-wrap {
+      width: 100%;
+      max-width: 400px;
+      padding: 1.5rem;
+    }
+
+    .login-brand {
+      text-align: center;
+      margin-bottom: 1.875rem;
+    }
+
+    .login-mark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px; height: 52px;
+      background: var(--pico-primary);
+      border-radius: 14px;
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .login-brand h2 {
+      margin: 0;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      font-size: 1.625rem;
+    }
+
+    .login-brand p {
+      margin: 0.25rem 0 0;
+      color: var(--pico-muted-color);
+      font-size: 0.875rem;
+    }
+
+    /* ── Pagination ──────────────────────────────────── */
+    .pager {
+      padding: 0.875rem 1.375rem;
+      border-top: 1px solid var(--pico-muted-border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .pager small { color: var(--pico-muted-color); }
+    .pager .acts button { padding: 0.3rem 0.7rem; }
+
+    /* ── Two-col grid ────────────────────────────────── */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 1.5rem;
+    }
+
+    dialog article { max-width: 460px; }
+    dialog article header { align-items: center; }
+    dialog article header h3 { margin: 0; }
+  </style>
+</head>
+<body class="is-login" id="body">
+
+<!-- ════════════════════════════════════════════════════════
+     LOGIN VIEW
+════════════════════════════════════════════════════════ -->
+<div id="login-view" class="login-wrap">
+  <div class="login-brand">
+    <div class="login-mark">🔐</div>
+    <h2>ArAuth</h2>
+    <p>管理后台 · Admin Console</p>
+  </div>
+  <article>
+    <form onsubmit="enterAdmin(event)">
+      <label>
+        管理员账号
+        <input type="text" name="u" placeholder="admin" value="admin" autocomplete="username" required />
+      </label>
+      <label>
+        密码
+        <input type="password" name="p" placeholder="••••••••" value="password" autocomplete="current-password" required />
+      </label>
+      <button type="submit" style="width:100%;margin-top:0.25rem">登录</button>
+    </form>
+    <p style="text-align:center;font-size:0.75rem;color:var(--pico-muted-color);margin:1rem 0 0">
+      Powered by Cloudflare Workers · ArAuth v1.0
+    </p>
+  </article>
+</div>
+
+<!-- ════════════════════════════════════════════════════════
+     SIDEBAR
+════════════════════════════════════════════════════════ -->
+<aside class="sidebar" id="sidebar" style="display:none">
+  <div class="sidebar-header">
+    <a class="logo-wrap" href="#">
+      <div class="logo-icon">🔐</div>
+      <div>
+        <span class="logo-name">ArAuth</span>
+        <span class="logo-sub">管理控制台</span>
+      </div>
+    </a>
+  </div>
+
+  <nav class="sidebar-nav">
+    <span class="nav-label">主菜单</span>
+    <button class="nav-btn active" id="nb-dash" onclick="showView('dash')">
+      <svg class="nav-ico" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
+      </svg>
+      概览
+    </button>
+
+    <span class="nav-label">管理</span>
+    <button class="nav-btn" id="nb-apps" onclick="showView('apps')">
+      <svg class="nav-ico" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V4a2 2 0 00-2-2H6zm1 2a1 1 0 000 2h6a1 1 0 100-2H7zm6 7a1 1 0 011 1v3a1 1 0 11-2 0v-3a1 1 0 011-1zm-3 3a1 1 0 100 2h.01a1 1 0 100-2H10zm-4 1a1 1 0 011-1h.01a1 1 0 110 2H7a1 1 0 01-1-1zm1-4a1 1 0 100 2h.01a1 1 0 100-2H7zm2 1a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1zm4-4a1 1 0 100 2h.01a1 1 0 100-2H13zM9 9a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1zM7 8a1 1 0 000 2h.01a1 1 0 000-2H7z" clip-rule="evenodd"/>
+      </svg>
+      应用管理
+      <span class="nav-count orange">3</span>
+    </button>
+    <button class="nav-btn" id="nb-users" onclick="showView('users')">
+      <svg class="nav-ico" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z"/>
+      </svg>
+      用户管理
+      <span class="nav-count cyan">142</span>
+    </button>
+
+    <span class="nav-label" style="margin-top:1rem">系统</span>
+    <button class="nav-btn" onclick="leaveAdmin()">
+      <svg class="nav-ico" viewBox="0 0 20 20" fill="currentColor">
+        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd"/>
+      </svg>
+      退出登录
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="admin-chip">
+      <div class="admin-avatar">A</div>
+      <div>
+        <div class="admin-name">admin</div>
+        <div class="admin-role">超级管理员</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════════════════════════════════════════════════════
+     MAIN PANE
+════════════════════════════════════════════════════════ -->
+<div class="main-pane" id="main-pane" style="display:none">
+
+  <!-- ── DASHBOARD VIEW ─────────────────────────────── -->
+  <div class="view active" id="view-dash">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">概览</h1>
+        <p class="page-sub">系统运行状态一览 · 2026-04-11 14:23 更新</p>
+      </div>
+      <div>
+        <button class="outline" style="padding:0.4rem 0.875rem;font-size:0.8125rem"
+                onclick="this.textContent='刷新中…';setTimeout(()=>this.textContent='刷新',1100)">刷新</button>
+      </div>
+    </div>
+    <div class="page-body">
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card c-orange">
+          <div class="stat-lbl">总用户数</div>
+          <div class="stat-val">142</div>
+          <div class="stat-hint"><span class="up">↑ 8</span> 较上周</div>
+        </div>
+        <div class="stat-card c-cyan">
+          <div class="stat-lbl">接入应用</div>
+          <div class="stat-val">3</div>
+          <div class="stat-hint">启用 <span style="color:var(--pico-color)">2</span> / 禁用 1</div>
+        </div>
+        <div class="stat-card c-green">
+          <div class="stat-lbl">近 7 天注册</div>
+          <div class="stat-val">23</div>
+          <div class="stat-hint"><span class="up">↑ 12%</span> 较上期</div>
+        </div>
+        <div class="stat-card c-violet">
+          <div class="stat-lbl">被锁定账号</div>
+          <div class="stat-val">2</div>
+          <div class="stat-hint">今日失败尝试 <span class="err">34</span> 次</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <!-- Recent Registrations -->
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">最近注册</h3>
+            <button class="outline" style="padding:0.3rem 0.7rem;font-size:0.8125rem" onclick="showView('users')">查看全部</button>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>用户名</th>
+                <th>状态</th>
+                <th>注册时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>alice_w</strong></td>
+                <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+                <td><small style="color:var(--pico-muted-color)">今天 09:14</small></td>
+              </tr>
+              <tr>
+                <td><strong>dev_bob</strong></td>
+                <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+                <td><small style="color:var(--pico-muted-color)">今天 07:32</small></td>
+              </tr>
+              <tr>
+                <td><strong>carol_99</strong></td>
+                <td><span class="badge lock"><span class="dot"></span>锁定中</span></td>
+                <td><small style="color:var(--pico-muted-color)">昨天 22:11</small></td>
+              </tr>
+              <tr>
+                <td><strong>frank_liu</strong></td>
+                <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+                <td><small style="color:var(--pico-muted-color)">昨天 18:45</small></td>
+              </tr>
+              <tr>
+                <td><strong>test_user_x</strong></td>
+                <td><span class="badge off"><span class="dot"></span>已禁用</span></td>
+                <td><small style="color:var(--pico-muted-color)">昨天 15:09</small></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Activity Feed -->
+        <div class="card">
+          <div class="card-head">
+            <h3 class="card-title">系统动态</h3>
+          </div>
+          <div class="feed">
+            <div class="feed-item">
+              <div class="feed-ico">🔒</div>
+              <div class="feed-main">
+                <div><span class="feed-user">carol_99</span> 因多次失败被锁定 15 分钟</div>
+                <div class="feed-time">14 分钟前</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-ico">✅</div>
+              <div class="feed-main">
+                <div>新用户 <span class="feed-user">alice_w</span> 注册成功</div>
+                <div class="feed-time">2 小时前</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-ico">🔑</div>
+              <div class="feed-main">
+                <div>应用 <span class="feed-user">HabitTracker</span> 已创建</div>
+                <div class="feed-time">昨天 16:22</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-ico">🚫</div>
+              <div class="feed-main">
+                <div>管理员禁用了 <span class="feed-user">test_user_x</span></div>
+                <div class="feed-time">昨天 11:35</div>
+              </div>
+            </div>
+            <div class="feed-item">
+              <div class="feed-ico">🔄</div>
+              <div class="feed-main">
+                <div>重置了 <span class="feed-user">dev_bob</span> 的密码</div>
+                <div class="feed-time">3 天前</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Apps Overview table -->
+      <div class="card">
+        <div class="card-head">
+          <h3 class="card-title">应用概览</h3>
+          <button style="padding:0.3rem 0.7rem;font-size:0.8125rem" onclick="showView('apps')">管理应用</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>名称</th>
+              <th>App Key</th>
+              <th>状态</th>
+              <th>活跃用户</th>
+              <th>创建日期</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>DailyNote</strong></td>
+              <td><span class="key">ark_dn_a1b2c3d4</span></td>
+              <td><span class="badge ok"><span class="dot"></span>启用</span></td>
+              <td>
+                <div class="bar-wrap">
+                  <progress value="89" max="142"></progress>
+                  <span>89</span>
+                </div>
+              </td>
+              <td><small style="color:var(--pico-muted-color)">2026-01-15</small></td>
+            </tr>
+            <tr>
+              <td><strong>HabitTracker</strong></td>
+              <td><span class="key">ark_ht_e5f6g7h8</span></td>
+              <td><span class="badge ok"><span class="dot"></span>启用</span></td>
+              <td>
+                <div class="bar-wrap">
+                  <progress value="34" max="142"></progress>
+                  <span>34</span>
+                </div>
+              </td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-10</small></td>
+            </tr>
+            <tr>
+              <td><strong>OldApp_v1</strong></td>
+              <td><span class="key">ark_oa_i9j0k1l2</span></td>
+              <td><span class="badge off"><span class="dot"></span>禁用</span></td>
+              <td>
+                <div class="bar-wrap">
+                  <progress value="19" max="142"></progress>
+                  <span>19</span>
+                </div>
+              </td>
+              <td><small style="color:var(--pico-muted-color)">2025-11-03</small></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div><!-- /dash -->
+
+  <!-- ── APPS VIEW ──────────────────────────────────── -->
+  <div class="view" id="view-apps">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">应用管理</h1>
+        <p class="page-sub">管理接入 ArAuth 的 Flutter 应用，生成 App Key / Secret</p>
+      </div>
+      <button onclick="document.getElementById('dlg-new-app').showModal()">+ 新建应用</button>
+    </div>
+    <div class="page-body">
+
+      <!-- One-time secret reveal (shown after creation) -->
+      <div class="secret-box" id="secret-alert" style="display:none">
+        <p style="margin:0 0 0.5rem"><strong>⚠️ 请立即保存 App Secret</strong> — 此密钥只显示一次，关闭后无法找回</p>
+        <div class="secret-row">
+          <div>
+            <div class="secret-field-label">App Key</div>
+            <span class="secret-val">ark_nb_m3n4o5p6</span>
+          </div>
+          <div>
+            <div class="secret-field-label">App Secret <span style="color:#f97316">（仅此一次）</span></div>
+            <span class="secret-val">ars_q7r8s9t0u1v2w3x4y5z6</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-top:0.875rem">
+          <button style="padding:0.3rem 0.875rem;font-size:0.8125rem"
+                  onclick="copy('ars_q7r8s9t0u1v2w3x4y5z6',this)">复制 Secret</button>
+          <button class="outline" style="padding:0.3rem 0.875rem;font-size:0.8125rem"
+                  onclick="document.getElementById('secret-alert').style.display='none'">我已保存，关闭</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h3 class="card-title">全部应用 <small style="font-weight:400;color:var(--pico-muted-color)">· 4 个</small></h3>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>应用名称</th>
+              <th>App Key</th>
+              <th>状态</th>
+              <th>创建时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>DailyNote</strong></td>
+              <td>
+                <span class="key">ark_dn_a1b2c3d4</span>
+                <button class="copy-btn" onclick="copy('ark_dn_a1b2c3d4',this)" title="复制">⎘</button>
+              </td>
+              <td><span class="badge ok"><span class="dot"></span>启用</span></td>
+              <td><small style="color:var(--pico-muted-color)">2026-01-15 10:00</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline">禁用</button>
+                  <button class="outline contrast">删除</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>HabitTracker</strong></td>
+              <td>
+                <span class="key">ark_ht_e5f6g7h8</span>
+                <button class="copy-btn" onclick="copy('ark_ht_e5f6g7h8',this)" title="复制">⎘</button>
+              </td>
+              <td><span class="badge ok"><span class="dot"></span>启用</span></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-10 16:22</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline">禁用</button>
+                  <button class="outline contrast">删除</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>NoteBook_Beta</strong></td>
+              <td>
+                <span class="key">ark_nb_m3n4o5p6</span>
+                <button class="copy-btn" onclick="copy('ark_nb_m3n4o5p6',this)" title="复制">⎘</button>
+              </td>
+              <td><span class="badge ok"><span class="dot"></span>启用</span></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-11 14:20</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline">禁用</button>
+                  <button class="outline contrast">删除</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>OldApp_v1</strong></td>
+              <td>
+                <span class="key">ark_oa_i9j0k1l2</span>
+                <button class="copy-btn" onclick="copy('ark_oa_i9j0k1l2',this)" title="复制">⎘</button>
+              </td>
+              <td><span class="badge off"><span class="dot"></span>禁用</span></td>
+              <td><small style="color:var(--pico-muted-color)">2025-11-03 08:44</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline">启用</button>
+                  <button class="outline contrast">删除</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div><!-- /apps -->
+
+  <!-- ── USERS VIEW ─────────────────────────────────── -->
+  <div class="view" id="view-users">
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">用户管理</h1>
+        <p class="page-sub">共 142 个用户 · 所有应用共享同一账号池</p>
+      </div>
+    </div>
+    <div class="page-body">
+      <div class="card">
+        <div class="toolbar">
+          <input type="search" placeholder="搜索用户名…" oninput="filterUsers(this.value)" />
+          <div style="display:flex;gap:0.5rem">
+            <select>
+              <option>全部状态</option>
+              <option>正常</option>
+              <option>禁用</option>
+              <option>锁定中</option>
+            </select>
+          </div>
+        </div>
+        <table id="user-tbl">
+          <thead>
+            <tr>
+              <th>用户名</th>
+              <th>状态</th>
+              <th>登录失败</th>
+              <th>Token 版本</th>
+              <th>注册时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>alice_w</strong></td>
+              <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+              <td><code style="font-size:0.8rem">0</code></td>
+              <td><code style="font-size:0.8rem">v1</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-11</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>dev_bob</strong></td>
+              <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+              <td><code style="font-size:0.8rem">1</code></td>
+              <td><code style="font-size:0.8rem">v3</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-11</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>carol_99</strong></td>
+              <td><span class="badge lock"><span class="dot"></span>锁定中</span></td>
+              <td><code style="font-size:0.8rem;color:#f97316">5</code></td>
+              <td><code style="font-size:0.8rem">v2</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-10</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>frank_liu</strong></td>
+              <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+              <td><code style="font-size:0.8rem">0</code></td>
+              <td><code style="font-size:0.8rem">v1</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-10</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>test_user_x</strong></td>
+              <td><span class="badge off"><span class="dot"></span>已禁用</span></td>
+              <td><code style="font-size:0.8rem">0</code></td>
+              <td><code style="font-size:0.8rem">v5</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-10</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button>启用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>grace_chen</strong></td>
+              <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+              <td><code style="font-size:0.8rem">2</code></td>
+              <td><code style="font-size:0.8rem">v2</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-09</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>harry_kim</strong></td>
+              <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+              <td><code style="font-size:0.8rem">0</code></td>
+              <td><code style="font-size:0.8rem">v1</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-08</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td><strong>ivan_zhao</strong></td>
+              <td><span class="badge ok"><span class="dot"></span>正常</span></td>
+              <td><code style="font-size:0.8rem">3</code></td>
+              <td><code style="font-size:0.8rem">v4</code></td>
+              <td><small style="color:var(--pico-muted-color)">2026-04-07</small></td>
+              <td>
+                <div class="acts">
+                  <button class="outline" onclick="document.getElementById('dlg-reset-pwd').showModal()">重置密码</button>
+                  <button class="outline contrast">禁用</button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="pager">
+          <small>显示第 1–8 条，共 142 条</small>
+          <div class="acts">
+            <button class="outline" disabled>上一页</button>
+            <button class="outline">下一页</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /users -->
+
+</div><!-- /main-pane -->
+
+<!-- ════════════════════════════════════════════════════════
+     DIALOGS
+════════════════════════════════════════════════════════ -->
+
+<!-- New App Dialog -->
+<dialog id="dlg-new-app">
+  <article>
+    <header>
+      <button rel="prev" onclick="document.getElementById('dlg-new-app').close()"></button>
+      <h3>新建应用</h3>
+    </header>
+    <p style="color:var(--pico-muted-color);font-size:0.875rem;margin-top:0">
+      创建成功后将一次性显示 App Secret，请妥善保管，丢失后无法找回。
+    </p>
+    <label>
+      应用名称
+      <input type="text" id="inp-app-name" placeholder="例如：MyFlutterApp" required />
+      <small>建议英文 + 下划线，便于识别</small>
+    </label>
+    <footer>
+      <button class="outline" onclick="document.getElementById('dlg-new-app').close()">取消</button>
+      <button onclick="createApp()">创建</button>
+    </footer>
+  </article>
+</dialog>
+
+<!-- Reset Password Dialog -->
+<dialog id="dlg-reset-pwd">
+  <article>
+    <header>
+      <button rel="prev" onclick="document.getElementById('dlg-reset-pwd').close()"></button>
+      <h3>重置密码</h3>
+    </header>
+    <p style="color:var(--pico-muted-color);font-size:0.875rem;margin-top:0">
+      密码重置后，该用户所有已登录设备将立即下线（token_version + 1）。
+    </p>
+    <label>
+      新密码
+      <input type="password" placeholder="至少 8 位字符" minlength="8" required />
+    </label>
+    <label>
+      确认密码
+      <input type="password" placeholder="再次输入新密码" required />
+    </label>
+    <footer>
+      <button class="outline" onclick="document.getElementById('dlg-reset-pwd').close()">取消</button>
+      <button onclick="document.getElementById('dlg-reset-pwd').close()">确认重置</button>
+    </footer>
+  </article>
+</dialog>
+
+<script>
+  /* ── State helpers ─────────────────────────────── */
+  function enterAdmin(e) {
+    e.preventDefault();
+    const b = document.getElementById('body');
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('sidebar').style.display = 'flex';
+    document.getElementById('main-pane').style.display = 'block';
+    b.className = 'is-admin';
+  }
+
+  function leaveAdmin() {
+    const b = document.getElementById('body');
+    document.getElementById('login-view').style.display = '';
+    document.getElementById('sidebar').style.display = 'none';
+    document.getElementById('main-pane').style.display = 'none';
+    b.className = 'is-login';
+  }
+
+  /* ── View switching ────────────────────────────── */
+  function showView(name) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    const v = document.getElementById('view-' + name);
+    const nb = document.getElementById('nb-' + name);
+    if (v)  v.classList.add('active');
+    if (nb) nb.classList.add('active');
+  }
+
+  /* ── User search ───────────────────────────────── */
+  function filterUsers(q) {
+    document.querySelectorAll('#user-tbl tbody tr').forEach(row => {
+      const name = row.querySelector('strong').textContent.toLowerCase();
+      row.style.display = name.includes(q.toLowerCase()) ? '' : 'none';
+    });
+  }
+
+  /* ── Create app (demo) ─────────────────────────── */
+  function createApp() {
+    const name = document.getElementById('inp-app-name').value.trim();
+    if (!name) return;
+    document.getElementById('dlg-new-app').close();
+    document.getElementById('inp-app-name').value = '';
+    document.getElementById('secret-alert').style.display = '';
+    showView('apps');
+  }
+
+  /* ── Copy to clipboard ─────────────────────────── */
+  function copy(text, btn) {
+    if (navigator.clipboard) navigator.clipboard.writeText(text);
+    const orig = btn.textContent;
+    btn.textContent = '已复制';
+    setTimeout(() => btn.textContent = orig, 1500);
+  }
+</script>
+</body>
+</html>
