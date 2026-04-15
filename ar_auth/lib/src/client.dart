@@ -26,6 +26,7 @@ class ArAuth extends ChangeNotifier {
   final http.Client _http;
 
   ArAuthUser? _currentUser;
+  bool _isInitialized = false;
 
   ArAuth({
     required this.baseUrl,
@@ -44,18 +45,23 @@ class ArAuth extends ChangeNotifier {
   /// Whether a user is currently logged in with a valid (non-expired) token.
   bool get isLoggedIn => _currentUser != null;
 
+  /// Whether [init] has completed. Use this to show a loading/splash screen.
+  bool get isInitialized => _isInitialized;
+
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
   /// Call once at app startup to restore persisted login state.
   Future<void> init() async {
     final session = await _storage.load();
-    if (session == null) return;
-    _currentUser = ArAuthUser(
-      userId: session.userId,
-      username: session.username,
-      token: session.token,
-      expiresIn: session.expiresAt - DateTime.now().millisecondsSinceEpoch ~/ 1000,
-    );
+    if (session != null) {
+      _currentUser = ArAuthUser(
+        userId: session.userId,
+        username: session.username,
+        token: session.token,
+        expiresIn: session.expiresAt - DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      );
+    }
+    _isInitialized = true;
     notifyListeners();
   }
 
