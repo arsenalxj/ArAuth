@@ -14,7 +14,7 @@ export type AppRow = {
 };
 
 export type UserRow = {
-  id: string;
+  id: number;
   username: string;
   password_hash: string;
   salt: string;

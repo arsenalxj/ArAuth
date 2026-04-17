@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import type { Env } from '../types';
-import { hashPassword, verifyPassword, randomHex } from '../lib/crypto';
+import { hashPassword, verifyPassword } from '../lib/crypto';
 import { signJwt, verifyJwt } from '../lib/jwt';
 import {
   getUserByUsername,
@@ -47,10 +47,9 @@ auth.post('/register', async (c) => {
   }
 
   const { hash, salt } = await hashPassword(password);
-  const id = randomHex(16);
-  await createUser(c.env.DB, { id, username, password_hash: hash, salt });
+  const id = await createUser(c.env.DB, { username, password_hash: hash, salt });
 
-  const token = await signJwt({ sub: id, username, tv: 1, type: 'user' }, c.env.JWT_SECRET);
+  const token = await signJwt({ sub: String(id), username, tv: 1, type: 'user' }, c.env.JWT_SECRET);
   return c.json({ user_id: id, token, expires_in: 604800 }, 201);
 });
 

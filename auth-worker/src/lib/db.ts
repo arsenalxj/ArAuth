@@ -59,14 +59,13 @@ export async function getUserById(db: D1Database, id: string): Promise<UserRow |
 
 export async function createUser(
   db: D1Database,
-  user: Pick<UserRow, 'id' | 'username' | 'password_hash' | 'salt'>,
-): Promise<void> {
-  await db
-    .prepare(
-      'INSERT INTO users (id, username, password_hash, salt) VALUES (?, ?, ?, ?)',
-    )
-    .bind(user.id, user.username, user.password_hash, user.salt)
+  user: Pick<UserRow, 'username' | 'password_hash' | 'salt'>,
+): Promise<number> {
+  const result = await db
+    .prepare('INSERT INTO users (username, password_hash, salt) VALUES (?, ?, ?)')
+    .bind(user.username, user.password_hash, user.salt)
     .run();
+  return result.meta.last_row_id;
 }
 
 export async function incrementFailedCount(db: D1Database, id: string): Promise<number> {
@@ -144,8 +143,8 @@ export async function listUsers(
   const params: (string | number)[] = [];
 
   if (opts.search) {
-    where += ' AND username LIKE ?';
-    params.push(`%${opts.search}%`);
+    where += ' AND (username LIKE ? OR id LIKE ?)';
+    params.push(`%${opts.search}%`, `%${opts.search}%`);
   }
   if (opts.status !== undefined) {
     where += ' AND status = ?';

@@ -113,6 +113,7 @@ export const UsersPage: FC<UsersPageProps> = ({
           <table>
             <thead>
               <tr>
+                <th>UID</th>
                 <th>用户名</th>
                 <th>状态</th>
                 <th>登录失败</th>
@@ -124,6 +125,11 @@ export const UsersPage: FC<UsersPageProps> = ({
             <tbody>
               {rows.map((user) => (
                 <tr key={user.id}>
+                  <td>
+                    <code style="font-size:.75rem;color:var(--pico-muted-color)">
+                      {user.id}
+                    </code>
+                  </td>
                   <td>
                     <strong>{user.username}</strong>
                   </td>
@@ -170,7 +176,7 @@ export const UsersPage: FC<UsersPageProps> = ({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} style="text-align:center;color:var(--pico-muted-color);padding:2rem">
+                  <td colSpan={7} style="text-align:center;color:var(--pico-muted-color);padding:2rem">
                     没有找到匹配的用户
                   </td>
                 </tr>

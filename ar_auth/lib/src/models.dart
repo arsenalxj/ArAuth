@@ -1,6 +1,6 @@
 /// The authenticated user returned after login or register.
 class ArAuthUser {
-  final String userId;
+  final int userId;
   final String username;
   final String token;
   final int expiresIn;
@@ -14,7 +14,7 @@ class ArAuthUser {
 
   factory ArAuthUser.fromJson(Map<String, dynamic> json, String username) {
     return ArAuthUser(
-      userId: json['user_id'] as String,
+      userId: json['user_id'] as int,
       username: username,
       token: json['token'] as String,
       expiresIn: json['expires_in'] as int,
@@ -28,7 +28,7 @@ class ArAuthUser {
 /// Result of token verification.
 class VerifyResult {
   final bool valid;
-  final String userId;
+  final int userId;
   final String username;
 
   const VerifyResult({
@@ -40,7 +40,7 @@ class VerifyResult {
   factory VerifyResult.fromJson(Map<String, dynamic> json) {
     return VerifyResult(
       valid: json['valid'] as bool,
-      userId: json['user_id'] as String,
+      userId: json['user_id'] as int,
       username: json['username'] as String,
     );
   }

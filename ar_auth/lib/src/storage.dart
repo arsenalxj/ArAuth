@@ -11,7 +11,7 @@ class TokenStorage {
 
   Future<void> save({
     required String token,
-    required String userId,
+    required int userId,
     required String username,
     required int expiresIn,
   }) async {
@@ -19,7 +19,7 @@ class TokenStorage {
     final expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
     await Future.wait([
       prefs.setString(_kToken, token),
-      prefs.setString(_kUserId, userId),
+      prefs.setString(_kUserId, userId.toString()),
       prefs.setString(_kUsername, username),
       prefs.setInt(_kExpiresAt, expiresAt),
     ]);
@@ -28,11 +28,17 @@ class TokenStorage {
   Future<StoredSession?> load() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString(_kToken);
-    final userId = prefs.getString(_kUserId);
+    final userIdStr = prefs.getString(_kUserId);
     final username = prefs.getString(_kUsername);
     final expiresAt = prefs.getInt(_kExpiresAt);
 
-    if (token == null || userId == null || username == null || expiresAt == null) {
+    if (token == null || userIdStr == null || username == null || expiresAt == null) {
+      return null;
+    }
+
+    final userId = int.tryParse(userIdStr);
+    if (userId == null) {
+      await clear();
       return null;
     }
 
@@ -63,7 +69,7 @@ class TokenStorage {
 
 class StoredSession {
   final String token;
-  final String userId;
+  final int userId;
   final String username;
   final int expiresAt;
 
