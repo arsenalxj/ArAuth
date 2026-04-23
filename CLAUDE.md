@@ -18,7 +18,8 @@ All commands run from `auth-worker/`:
 npm install          # install deps (first time)
 npx wrangler dev     # local dev (uses local D1)
 npx wrangler deploy  # deploy to production
-npx wrangler d1 execute auth-db --remote --file=migrations/0001_initial.sql  # run migration on prod
+npx wrangler d1 execute auth-db --remote --file=migrations/0001_initial.sql  # 初始建表
+npx wrangler d1 execute auth-db --remote --file=migrations/0002_users_integer_id.sql  # users.id 改为自增整数
 ```
 
 ## Architecture
@@ -46,6 +47,8 @@ Single Worker serving two concerns:
 - `app_secret` is PBKDF2-hashed in D1, never stored in plaintext
 
 **D1 schema** (3 tables): `apps`, `users`, `admins` — see `migrations/0001_initial.sql`
+- `users.id` 为 `INTEGER PRIMARY KEY AUTOINCREMENT`，起始值 100000（由 `0002_users_integer_id.sql` 设定）
+- 管理后台用户列表展示 UID，支持按 UID 或用户名搜索
 
 ### ar_auth (Flutter SDK)
 

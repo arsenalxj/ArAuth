@@ -59,6 +59,7 @@ npx wrangler d1 create auth-db
 
 # 2. 建表
 npx wrangler d1 execute auth-db --remote --file=migrations/0001_initial.sql
+npx wrangler d1 execute auth-db --remote --file=migrations/0002_users_integer_id.sql
 
 # 3. 设置 JWT 密钥
 npx wrangler secret put JWT_SECRET
@@ -78,7 +79,18 @@ curl -X POST https://<your-worker>.workers.dev/admin/bootstrap \
 
 ### 安装
 
-在 `pubspec.yaml` 中引用本地路径（或发布到 pub.dev 后用包名引入）：
+从 GitHub 引用（推荐）：
+
+```yaml
+dependencies:
+  ar_auth:
+    git:
+      url: https://github.com/arsenalxj/ArAuth.git
+      ref: d37953f
+      path: ar_auth
+```
+
+或引用本地路径：
 
 ```yaml
 dependencies:
@@ -101,7 +113,7 @@ final auth = ArAuth(
 await auth.init();
 if (auth.isLoggedIn) { /* 跳转主页 */ }
 
-// 注册
+// 注册（user.userId 为 int，如 100001）
 final user = await auth.register('alice', 'password123');
 
 // 登录
