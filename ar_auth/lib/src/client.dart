@@ -201,6 +201,19 @@ class ArAuth extends ChangeNotifier {
     await _clearLocalState();
   }
 
+  Future<Map<String, String>> buildAuthorizationHeaders({
+    Map<String, String>? baseHeaders,
+    Duration minValidity = const Duration(seconds: 30),
+  }) async {
+    final accessToken = await _ensureValidAccessToken(
+      minValidity: minValidity,
+    );
+    return <String, String>{
+      ...?baseHeaders,
+      'Authorization': 'Bearer $accessToken',
+    };
+  }
+
   Future<void> _applyAuthSuccess({
     required ArAuthUser user,
     required String accessToken,
@@ -283,24 +296,48 @@ class ArAuth extends ChangeNotifier {
     Map<String, dynamic> body, {
     bool allowRetry = true,
   }) async {
-    _ensureReadyForProtectedRequest();
-
-    if (_accessToken == null) {
-      await _refreshSession();
-    }
+    final accessToken = await _ensureValidAccessToken();
 
     try {
-      return await _post(path, body, accessToken: _accessToken);
+      return await _post(path, body, accessToken: accessToken);
     } on ArAuthException catch (e) {
       if (e.code == 'token_expired' && allowRetry) {
         await _refreshSession();
         return _postWithAuth(path, body, allowRetry: false);
       }
-      if (_terminalSessionCodes.contains(e.code)) {
-        await _clearLocalState();
-        throw SessionTerminatedException(e.code, e.message);
-      }
+      await _rethrowIfSessionTerminated(e);
       rethrow;
+    }
+  }
+
+  Future<String> _ensureValidAccessToken({
+    Duration minValidity = Duration.zero,
+  }) async {
+    _ensureReadyForProtectedRequest();
+
+    final normalizedMinValidity = minValidity.isNegative
+        ? Duration.zero
+        : minValidity;
+    final threshold = DateTime.now().add(normalizedMinValidity);
+    final expiresAt = _accessTokenExpiresAt;
+    final needsRefresh =
+        _accessToken == null || expiresAt == null || !expiresAt.isAfter(threshold);
+
+    if (needsRefresh) {
+      await _refreshSession();
+    }
+
+    final accessToken = _accessToken;
+    if (accessToken == null) {
+      throw const SessionTerminatedException('not_logged_in', 'Not logged in');
+    }
+    return accessToken;
+  }
+
+  Future<void> _rethrowIfSessionTerminated(ArAuthException error) async {
+    if (_terminalSessionCodes.contains(error.code)) {
+      await _clearLocalState();
+      throw SessionTerminatedException(error.code, error.message);
     }
   }
 
