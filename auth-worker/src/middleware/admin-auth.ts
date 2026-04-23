@@ -18,7 +18,7 @@ export async function adminAuth(c: Context<{ Bindings: Env }>, next: Next) {
       return redirectToLogin(c);
     }
     c.set('adminPayload' as never, payload);
-    await next();
+    return next();
   } catch {
     return redirectToLogin(c);
   }

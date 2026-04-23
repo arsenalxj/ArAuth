@@ -1,38 +1,50 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const _kToken = 'ar_auth_token';
+const _kRefreshToken = 'ar_auth_refresh_token';
 const _kUserId = 'ar_auth_user_id';
 const _kUsername = 'ar_auth_username';
-const _kExpiresAt = 'ar_auth_expires_at'; // Unix seconds
+const _kSessionId = 'ar_auth_session_id';
+const _kRefreshExpiresAt = 'ar_auth_refresh_expires_at';
 
-/// Thin wrapper around SharedPreferences for persisting auth state.
 class TokenStorage {
-  const TokenStorage();
+  final FlutterSecureStorage _secureStorage;
+
+  const TokenStorage({
+    FlutterSecureStorage secureStorage = const FlutterSecureStorage(),
+  }) : _secureStorage = secureStorage;
 
   Future<void> save({
-    required String token,
+    required String refreshToken,
     required int userId,
     required String username,
-    required int expiresIn,
+    required String sessionId,
+    required int refreshExpiresIn,
   }) async {
     final prefs = await SharedPreferences.getInstance();
-    final expiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + expiresIn;
+    final refreshExpiresAt = DateTime.now().millisecondsSinceEpoch ~/ 1000 + refreshExpiresIn;
+
     await Future.wait([
-      prefs.setString(_kToken, token),
+      _secureStorage.write(key: _kRefreshToken, value: refreshToken),
       prefs.setString(_kUserId, userId.toString()),
       prefs.setString(_kUsername, username),
-      prefs.setInt(_kExpiresAt, expiresAt),
+      prefs.setString(_kSessionId, sessionId),
+      prefs.setInt(_kRefreshExpiresAt, refreshExpiresAt),
     ]);
   }
 
   Future<StoredSession?> load() async {
     final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString(_kToken);
+    final refreshToken = await _secureStorage.read(key: _kRefreshToken);
     final userIdStr = prefs.getString(_kUserId);
     final username = prefs.getString(_kUsername);
-    final expiresAt = prefs.getInt(_kExpiresAt);
+    final sessionId = prefs.getString(_kSessionId);
+    final refreshExpiresAt = prefs.getInt(_kRefreshExpiresAt);
 
-    if (token == null || userIdStr == null || username == null || expiresAt == null) {
+    if (refreshToken == null || userIdStr == null || username == null || sessionId == null) {
+      if (refreshToken != null || userIdStr != null || username != null || sessionId != null) {
+        await clear();
+      }
       return null;
     }
 
@@ -42,44 +54,39 @@ class TokenStorage {
       return null;
     }
 
-    final nowSeconds = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    if (expiresAt <= nowSeconds) {
-      await clear();
-      return null;
-    }
-
     return StoredSession(
-      token: token,
+      refreshToken: refreshToken,
       userId: userId,
       username: username,
-      expiresAt: expiresAt,
+      sessionId: sessionId,
+      refreshExpiresAt: refreshExpiresAt,
     );
   }
 
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await Future.wait([
-      prefs.remove(_kToken),
+      _secureStorage.delete(key: _kRefreshToken),
       prefs.remove(_kUserId),
       prefs.remove(_kUsername),
-      prefs.remove(_kExpiresAt),
+      prefs.remove(_kSessionId),
+      prefs.remove(_kRefreshExpiresAt),
     ]);
   }
 }
 
 class StoredSession {
-  final String token;
+  final String refreshToken;
   final int userId;
   final String username;
-  final int expiresAt;
+  final String sessionId;
+  final int? refreshExpiresAt;
 
   const StoredSession({
-    required this.token,
+    required this.refreshToken,
     required this.userId,
     required this.username,
-    required this.expiresAt,
+    required this.sessionId,
+    required this.refreshExpiresAt,
   });
-
-  bool get isExpired =>
-      expiresAt <= DateTime.now().millisecondsSinceEpoch ~/ 1000;
 }

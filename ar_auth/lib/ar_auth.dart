@@ -17,12 +17,15 @@ export 'src/models.dart' show ArAuthUser, VerifyResult;
 export 'src/exceptions.dart'
     show
         ArAuthException,
+        InvalidRequestException,
         InvalidCredentialsException,
         AccountLockedException,
         AccountDisabledException,
         UsernameTakenException,
-        WeakPasswordException,
+        WrongPasswordException,
         TokenException,
+        SessionTerminatedException,
+        NotInitializedException,
         NetworkException,
         AppAuthException;
 export 'src/storage.dart' show TokenStorage, StoredSession;

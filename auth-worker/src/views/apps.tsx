@@ -106,13 +106,13 @@ export const AppsPage: FC<AppsPageProps> = ({ apps, adminName, usersCount, newSe
                 </td>
                 <td>
                   <div class="acts">
-                    <form method="POST" action={`/admin/apps/${app.id}/toggle`} style="margin:0">
+                    <form method="post" action={`/admin/apps/${app.id}/toggle`} style="margin:0">
                       <button type="submit" class="outline">
                         {app.status === 1 ? '禁用' : '启用'}
                       </button>
                     </form>
                     <form
-                      method="POST"
+                      method="post"
                       action={`/admin/apps/${app.id}/delete`}
                       style="margin:0"
                       onsubmit="return confirm('确定删除该应用？此操作不可恢复。')"
@@ -147,7 +147,7 @@ export const AppsPage: FC<AppsPageProps> = ({ apps, adminName, usersCount, newSe
         <p style="color:var(--pico-muted-color);font-size:.875rem;margin-top:0">
           创建成功后将一次性显示 App Secret，请妥善保管，丢失后无法找回。
         </p>
-        <form method="POST" action="/admin/apps">
+        <form method="post" action="/admin/apps">
           <label>
             应用名称
             <input type="text" name="name" placeholder="例如：MyFlutterApp" required />

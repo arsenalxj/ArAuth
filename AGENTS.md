@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
 
 ## Repository Layout
 
@@ -20,13 +20,6 @@ npx wrangler dev     # local dev (uses local D1)
 npx wrangler deploy  # deploy to production
 npx wrangler d1 execute auth-db --remote --file=migrations/0001_initial.sql  # 初始建表
 npx wrangler d1 execute auth-db --remote --file=migrations/0002_users_integer_id.sql  # users.id 改为自增整数
-npx wrangler d1 execute auth-db --remote --file=migrations/0003_sessions.sql  # 新增 v2 session 表
-```
-
-本地运行 `wrangler dev` 时需要在 `auth-worker/.dev.vars` 中提供：
-
-```bash
-JWT_SECRET=your-local-dev-secret
 ```
 
 ## Architecture
@@ -35,43 +28,35 @@ JWT_SECRET=your-local-dev-secret
 
 Single Worker serving two concerns:
 
-**Auth API** — 同时提供 `v1` 与 `v2`
+**Auth API** — `POST /api/v1/auth/*`
 - All routes require `X-App-Key` / `X-App-Secret` headers (verified by `middleware/app-auth.ts`)
 - Rate limited per IP (`middleware/rate-limit.ts`, in-memory, resets on Worker restart)
-- `v1` routes: `register`, `login`, `verify`, `change-password`, `logout`, `delete-account`
-- `v2` routes: `register`, `login`, `refresh`, `verify`, `logout`, `logout-all`, `change-password`, `delete-account`
-- `v2 /refresh` 不做 IP 限速，避免冷启动恢复和并发自动刷新被误伤
+- Routes: `register`, `login`, `verify`, `change-password`, `logout`, `delete-account`
 
 **Admin dashboard** — `GET|POST /admin/*`
 - Protected by `HttpOnly` cookie `admin_token` (`middleware/admin-auth.ts`)
 - Server-side rendered with Hono JSX (files must be `.tsx`)
 - CSS/layout mirrors `docs/DanDan/ui-preview.html` exactly — Pico.css CDN + custom overrides in `views/layout.tsx`
 - Bootstrap endpoint `POST /admin/bootstrap` creates the first admin (no auth required, but safe: errors if admin already exists)
-- 用户列表展示活跃会话数与最近活跃时间；管理员重置密码时会撤销该用户全部 active session
 
 **Key security patterns:**
 - Passwords: PBKDF2-SHA256, 100k iterations, 16-byte random salt (`lib/crypto.ts`)
-- Access JWTs: HMAC-SHA256, 15-minute expiry, carry `sid` / `aid`
-- Refresh tokens: random string (`<session_id>.<secret>`), server stores only SHA-256 hash in D1
-- Session invalidation: `sessions` 表负责精确撤销单个会话；兼容期内 `users.token_version` 继续用于让旧版 `/api/v1/auth/*` token 立即失效
+- JWTs: HMAC-SHA256, 7-day expiry, carry `tv` (token_version) field (`lib/jwt.ts`)
+- Token invalidation: bumping `users.token_version` in D1 immediately revokes all JWTs for that user — used on logout and password change
 - Brute-force lock: 5 failures → 15-minute lock via `users.locked_until`
 - `app_secret` is PBKDF2-hashed in D1, never stored in plaintext
-- Daily Cron cleanup deletes expired / revoked sessions older than 7 days
 
-**D1 schema** (4 tables): `apps`, `users`, `admins`, `sessions`
+**D1 schema** (3 tables): `apps`, `users`, `admins` — see `migrations/0001_initial.sql`
 - `users.id` 为 `INTEGER PRIMARY KEY AUTOINCREMENT`，起始值 100000（由 `0002_users_integer_id.sql` 设定）
 - 管理后台用户列表展示 UID，支持按 UID 或用户名搜索
-- `sessions` 记录 `user_id + app_id + refresh_token_hash + expires_at`，支持多 App / 多设备独立会话
 
 ### ar_auth (Flutter SDK)
 
 `ArAuth` extends `ChangeNotifier` — drop into Provider/Riverpod directly.
 
-- `init()` must be called at startup; it restores login state via `/api/v2/auth/refresh`
-- `accessToken` lives in memory only
-- `refreshToken` is persisted via `flutter_secure_storage`; user metadata is kept in `SharedPreferences`
-- SDK auto-refreshes on `token_expired` and serializes concurrent refreshes behind a shared Future
-- `logoutAll()` is available and clears every active session for the user
+- `init()` must be called at startup to restore persisted session
+- `login()` / `register()` persist token to `SharedPreferences` via `TokenStorage`
+- `changePassword()` and `logout()` hit the server then clear local state
 - All HTTP errors are mapped to typed exceptions in `src/exceptions.dart`
 
 ## Secrets

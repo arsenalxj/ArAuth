@@ -3,8 +3,9 @@ import { cors } from 'hono/cors';
 import type { Env } from './types';
 import { appAuth } from './middleware/app-auth';
 import { rateLimit } from './middleware/rate-limit';
-import authRoutes from './routes/auth';
-import adminRoutes from './routes/admin.tsx';
+import authRoutes, { authV2 } from './routes/auth';
+import adminRoutes from './routes/admin';
+import { cleanupSessions } from './lib/db';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -20,9 +21,20 @@ app.use('/api/v1/auth/*', rateLimit);
 
 // ── App authentication for all auth API routes ───────────────────────────────
 app.use('/api/v1/auth/*', appAuth);
+app.use('/api/v2/auth/*', appAuth);
+
+// ── Rate limit for v2 auth routes except refresh ─────────────────────────────
+app.use('/api/v2/auth/register', rateLimit);
+app.use('/api/v2/auth/login', rateLimit);
+app.use('/api/v2/auth/verify', rateLimit);
+app.use('/api/v2/auth/logout', rateLimit);
+app.use('/api/v2/auth/logout-all', rateLimit);
+app.use('/api/v2/auth/change-password', rateLimit);
+app.use('/api/v2/auth/delete-account', rateLimit);
 
 // ── Auth API routes ───────────────────────────────────────────────────────────
 app.route('/api/v1/auth', authRoutes);
+app.route('/api/v2/auth', authV2);
 
 // ── Admin routes ──────────────────────────────────────────────────────────────
 app.route('/admin', adminRoutes);
@@ -33,4 +45,9 @@ app.get('/', (c) => c.redirect('/admin/login'));
 // ── Health check ─────────────────────────────────────────────────────────────
 app.get('/health', (c) => c.json({ status: 'ok', service: 'ArAuth', version: '1.0.0' }));
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller: ScheduledController, env: Env): Promise<void> {
+    await cleanupSessions(env.DB);
+  },
+};

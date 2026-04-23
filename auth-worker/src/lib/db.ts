@@ -1,4 +1,8 @@
-import type { AppRow, UserRow, AdminRow } from '../types';
+import type { AppRow, UserRow, AdminRow, SessionRow } from '../types';
+
+function nowSql(): string {
+  return new Date().toISOString().slice(0, 19).replace('T', ' ');
+}
 
 // ── Apps ────────────────────────────────────────────────────────────────────
 
@@ -15,10 +19,7 @@ export async function listApps(db: D1Database): Promise<AppRow[]> {
   return result.results;
 }
 
-export async function createApp(
-  db: D1Database,
-  app: Omit<AppRow, 'created_at'>,
-): Promise<void> {
+export async function createApp(db: D1Database, app: Omit<AppRow, 'created_at'>): Promise<void> {
   await db
     .prepare(
       'INSERT INTO apps (id, name, app_key, app_secret, app_secret_salt, status) VALUES (?, ?, ?, ?, ?, ?)',
@@ -52,7 +53,7 @@ export async function getUserByUsername(db: D1Database, username: string): Promi
   return result ?? null;
 }
 
-export async function getUserById(db: D1Database, id: string): Promise<UserRow | null> {
+export async function getUserById(db: D1Database, id: string | number): Promise<UserRow | null> {
   const result = await db.prepare('SELECT * FROM users WHERE id = ?').bind(id).first<UserRow>();
   return result ?? null;
 }
@@ -68,7 +69,7 @@ export async function createUser(
   return result.meta.last_row_id;
 }
 
-export async function incrementFailedCount(db: D1Database, id: string): Promise<number> {
+export async function incrementFailedCount(db: D1Database, id: string | number): Promise<number> {
   await db
     .prepare(
       "UPDATE users SET failed_count = failed_count + 1, updated_at = datetime('now') WHERE id = ?",
@@ -82,17 +83,15 @@ export async function incrementFailedCount(db: D1Database, id: string): Promise<
   return row?.failed_count ?? 0;
 }
 
-export async function lockUser(db: D1Database, id: string, minutes: number): Promise<void> {
+export async function lockUser(db: D1Database, id: string | number, minutes: number): Promise<void> {
   const until = new Date(Date.now() + minutes * 60 * 1000).toISOString();
   await db
-    .prepare(
-      "UPDATE users SET locked_until = ?, updated_at = datetime('now') WHERE id = ?",
-    )
+    .prepare("UPDATE users SET locked_until = ?, updated_at = datetime('now') WHERE id = ?")
     .bind(until, id)
     .run();
 }
 
-export async function resetFailedCount(db: D1Database, id: string): Promise<void> {
+export async function resetFailedCount(db: D1Database, id: string | number): Promise<void> {
   await db
     .prepare(
       "UPDATE users SET failed_count = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?",
@@ -101,7 +100,7 @@ export async function resetFailedCount(db: D1Database, id: string): Promise<void
     .run();
 }
 
-export async function bumpTokenVersion(db: D1Database, id: string): Promise<void> {
+export async function bumpTokenVersion(db: D1Database, id: string | number): Promise<void> {
   await db
     .prepare(
       "UPDATE users SET token_version = token_version + 1, updated_at = datetime('now') WHERE id = ?",
@@ -112,7 +111,7 @@ export async function bumpTokenVersion(db: D1Database, id: string): Promise<void
 
 export async function updatePassword(
   db: D1Database,
-  id: string,
+  id: string | number,
   hash: string,
   salt: string,
 ): Promise<void> {
@@ -124,14 +123,14 @@ export async function updatePassword(
     .run();
 }
 
-export async function setUserStatus(db: D1Database, id: string, status: number): Promise<void> {
+export async function setUserStatus(db: D1Database, id: string | number, status: number): Promise<void> {
   await db
     .prepare("UPDATE users SET status = ?, updated_at = datetime('now') WHERE id = ?")
     .bind(status, id)
     .run();
 }
 
-export async function deleteUser(db: D1Database, id: string): Promise<void> {
+export async function deleteUser(db: D1Database, id: string | number): Promise<void> {
   await db.prepare('DELETE FROM users WHERE id = ?').bind(id).run();
 }
 
@@ -143,22 +142,31 @@ export async function listUsers(
   const params: (string | number)[] = [];
 
   if (opts.search) {
-    where += ' AND (username LIKE ? OR id LIKE ?)';
+    where += ' AND (u.username LIKE ? OR CAST(u.id AS TEXT) LIKE ?)';
     params.push(`%${opts.search}%`, `%${opts.search}%`);
   }
   if (opts.status !== undefined) {
-    where += ' AND status = ?';
+    where += ' AND u.status = ?';
     params.push(opts.status);
   }
 
   const countRow = await db
-    .prepare(`SELECT COUNT(*) as c FROM users WHERE ${where}`)
+    .prepare(`SELECT COUNT(*) as c FROM users u WHERE ${where}`)
     .bind(...params)
     .first<{ c: number }>();
 
   const rows = await db
     .prepare(
-      `SELECT * FROM users WHERE ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+      `SELECT
+         u.*,
+         COUNT(CASE WHEN s.status = 'active' AND s.expires_at > datetime('now') THEN 1 END) AS active_sessions,
+         MAX(s.last_seen_at) AS last_seen_at
+       FROM users u
+       LEFT JOIN sessions s ON s.user_id = u.id
+       WHERE ${where}
+       GROUP BY u.id
+       ORDER BY u.created_at DESC
+       LIMIT ? OFFSET ?`,
     )
     .bind(...params, opts.limit, opts.offset)
     .all<UserRow>();
@@ -166,21 +174,15 @@ export async function listUsers(
   return { rows: rows.results, total: countRow?.c ?? 0 };
 }
 
-export async function countUsers(
-  db: D1Database,
-): Promise<{ total: number; locked: number; week: number }> {
-  const total = await db
-    .prepare('SELECT COUNT(*) as c FROM users')
-    .first<{ c: number }>();
+export async function countUsers(db: D1Database): Promise<{ total: number; locked: number; week: number }> {
+  const total = await db.prepare('SELECT COUNT(*) as c FROM users').first<{ c: number }>();
   const locked = await db
     .prepare(
       "SELECT COUNT(*) as c FROM users WHERE locked_until IS NOT NULL AND locked_until > datetime('now')",
     )
     .first<{ c: number }>();
   const week = await db
-    .prepare(
-      "SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-7 days')",
-    )
+    .prepare("SELECT COUNT(*) as c FROM users WHERE created_at >= datetime('now', '-7 days')")
     .first<{ c: number }>();
   return {
     total: total?.c ?? 0,
@@ -189,12 +191,111 @@ export async function countUsers(
   };
 }
 
+// ── Sessions ────────────────────────────────────────────────────────────────
+
+export async function createSession(
+  db: D1Database,
+  session: Pick<
+    SessionRow,
+    'id' | 'user_id' | 'app_id' | 'refresh_token_hash' | 'expires_at' | 'device_name' | 'client_build'
+  >,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO sessions (
+         id, user_id, app_id, refresh_token_hash, status, device_name, client_build, last_seen_at, expires_at, created_at
+       ) VALUES (?, ?, ?, ?, 'active', ?, ?, datetime('now'), ?, datetime('now'))`,
+    )
+    .bind(
+      session.id,
+      session.user_id,
+      session.app_id,
+      session.refresh_token_hash,
+      session.device_name,
+      session.client_build,
+      session.expires_at,
+    )
+    .run();
+}
+
+export async function getSessionById(db: D1Database, id: string): Promise<SessionRow | null> {
+  const result = await db.prepare('SELECT * FROM sessions WHERE id = ?').bind(id).first<SessionRow>();
+  return result ?? null;
+}
+
+export async function rotateSessionRefreshToken(
+  db: D1Database,
+  id: string,
+  refreshTokenHash: string,
+  expiresAt: string,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE sessions
+       SET refresh_token_hash = ?, expires_at = ?, last_seen_at = datetime('now')
+       WHERE id = ?`,
+    )
+    .bind(refreshTokenHash, expiresAt, id)
+    .run();
+}
+
+export async function revokeSession(
+  db: D1Database,
+  id: string,
+  reason: string,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE sessions
+       SET status = 'revoked', revoked_at = datetime('now'), revoke_reason = ?
+       WHERE id = ? AND status = 'active'`,
+    )
+    .bind(reason, id)
+    .run();
+}
+
+export async function revokeAllSessionsForUser(
+  db: D1Database,
+  userId: string | number,
+  reason: string,
+): Promise<number> {
+  const result = await db
+    .prepare(
+      `UPDATE sessions
+       SET status = 'revoked', revoked_at = datetime('now'), revoke_reason = ?
+       WHERE user_id = ? AND status = 'active' AND expires_at > datetime('now')`,
+    )
+    .bind(reason, userId)
+    .run();
+  return result.meta.changes ?? 0;
+}
+
+export async function deleteSessionsForUser(db: D1Database, userId: string | number): Promise<void> {
+  await db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId).run();
+}
+
+export async function cleanupSessions(db: D1Database): Promise<{ expired: number; revoked: number }> {
+  const expired = await db
+    .prepare("DELETE FROM sessions WHERE expires_at < datetime('now', '-7 days')")
+    .run();
+  const revoked = await db
+    .prepare(
+      "DELETE FROM sessions WHERE status = 'revoked' AND revoked_at IS NOT NULL AND revoked_at < datetime('now', '-7 days')",
+    )
+    .run();
+  return {
+    expired: expired.meta.changes ?? 0,
+    revoked: revoked.meta.changes ?? 0,
+  };
+}
+
+export function isSessionExpired(session: SessionRow): boolean {
+  return session.expires_at <= nowSql();
+}
+
 // ── Admins ──────────────────────────────────────────────────────────────────
 
-export async function getAdminByUsername(
-  db: D1Database,
-  username: string,
-): Promise<AdminRow | null> {
+export async function getAdminByUsername(db: D1Database, username: string): Promise<AdminRow | null> {
   const result = await db
     .prepare('SELECT * FROM admins WHERE username = ?')
     .bind(username)

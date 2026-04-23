@@ -8,7 +8,7 @@ const ipMap = new Map<string, { count: number; resetAt: number }>();
 const WINDOW_MS = 60_000; // 1 minute
 const MAX_REQUESTS = 30;  // per IP per window for auth endpoints
 
-export function rateLimit(c: Context<{ Bindings: Env }>, next: Next) {
+export async function rateLimit(c: Context<{ Bindings: Env }>, next: Next) {
   const ip = c.req.header('CF-Connecting-IP') ?? c.req.header('X-Forwarded-For') ?? 'unknown';
   const now = Date.now();
 

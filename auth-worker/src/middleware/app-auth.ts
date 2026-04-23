@@ -25,5 +25,5 @@ export async function appAuth(c: Context<{ Bindings: Env }>, next: Next) {
   }
 
   c.set('app' as never, app);
-  await next();
+  return next();
 }

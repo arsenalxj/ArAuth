@@ -40,6 +40,13 @@ function userBadge(user: UserRow) {
   );
 }
 
+function formatLastSeen(value: string | null | undefined) {
+  if (!value) {
+    return '—';
+  }
+  return value.slice(0, 16).replace('T', ' ');
+}
+
 export const UsersPage: FC<UsersPageProps> = ({
   rows,
   total,
@@ -82,7 +89,7 @@ export const UsersPage: FC<UsersPageProps> = ({
       <div class="page-body">
         <div class="card">
           {/* Search / filter toolbar */}
-          <form method="GET" action="/admin/users" style="margin:0">
+          <form method="get" action="/admin/users" style="margin:0">
             <div class="toolbar">
               <input
                 type="search"
@@ -117,7 +124,8 @@ export const UsersPage: FC<UsersPageProps> = ({
                 <th>用户名</th>
                 <th>状态</th>
                 <th>登录失败</th>
-                <th>Token 版本</th>
+                <th>活跃会话</th>
+                <th>最近活跃</th>
                 <th>注册时间</th>
                 <th>操作</th>
               </tr>
@@ -140,7 +148,12 @@ export const UsersPage: FC<UsersPageProps> = ({
                     </code>
                   </td>
                   <td>
-                    <code style="font-size:.8rem">v{user.token_version}</code>
+                    <code style="font-size:.8rem">{user.active_sessions ?? 0}</code>
+                  </td>
+                  <td>
+                    <small style="color:var(--pico-muted-color)">
+                      {formatLastSeen(user.last_seen_at)}
+                    </small>
                   </td>
                   <td>
                     <small style="color:var(--pico-muted-color)">
@@ -157,7 +170,7 @@ export const UsersPage: FC<UsersPageProps> = ({
                         重置密码
                       </button>
                       <form
-                        method="POST"
+                        method="post"
                         action={`/admin/users/${user.id}/toggle`}
                         style="margin:0"
                       >
@@ -176,7 +189,7 @@ export const UsersPage: FC<UsersPageProps> = ({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} style="text-align:center;color:var(--pico-muted-color);padding:2rem">
+                  <td colSpan={8} style="text-align:center;color:var(--pico-muted-color);padding:2rem">
                     没有找到匹配的用户
                   </td>
                 </tr>
@@ -226,9 +239,9 @@ export const UsersPage: FC<UsersPageProps> = ({
               <h3>重置密码 · {user.username}</h3>
             </header>
             <p style="color:var(--pico-muted-color);font-size:.875rem;margin-top:0">
-              密码重置后，该用户所有已登录设备将立即下线（token_version + 1）。
+              密码重置后，该用户所有已登录会话将立即失效，设备需重新登录。
             </p>
-            <form method="POST" action={`/admin/users/${user.id}/reset-password`}>
+            <form method="post" action={`/admin/users/${user.id}/reset-password`}>
               <input type="hidden" name="redirect" value={buildUrl(page)} />
               <label>
                 新密码

@@ -243,7 +243,7 @@ export const Layout: FC<LayoutProps & { children?: unknown }> = ({
               <span class="nav-count cyan">{usersCount}</span>
             </a>
             <span class="nav-label" style="margin-top:1rem">系统</span>
-            <form method="POST" action="/admin/logout" style="margin:0">
+            <form method="post" action="/admin/logout" style="margin:0">
               <button type="submit" class="nav-btn">
                 <svg class="nav-ico" viewBox="0 0 20 20" fill="currentColor">
                   <path

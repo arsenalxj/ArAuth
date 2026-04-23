@@ -16,6 +16,7 @@ import {
   setUserStatus,
   updatePassword,
   countUsers,
+  revokeAllSessionsForUser,
 } from '../lib/db';
 import { adminAuth } from '../middleware/admin-auth';
 import { LoginPage } from '../views/login';
@@ -82,7 +83,7 @@ admin.post('/login', async (c) => {
   }
 
   const token = await signJwt(
-    { sub: adminRow.id, username: adminRow.username, tv: 1, type: 'admin' },
+    { sub: adminRow.id, username: adminRow.username, type: 'admin' },
     c.env.JWT_SECRET,
   );
 
@@ -251,6 +252,7 @@ admin.post('/users/:id/reset-password', async (c) => {
 
   const { hash, salt } = await hashPassword(body.password);
   await updatePassword(c.env.DB, id, hash, salt);
+  await revokeAllSessionsForUser(c.env.DB, id, 'admin_password_reset');
   return c.redirect(body.redirect ?? '/admin/users');
 });
 

@@ -1,6 +1,15 @@
-import type { JwtPayload } from '../types';
+import type {
+  JwtPayload,
+  UserJwtPayload,
+  AdminJwtPayload,
+  AccessJwtPayload,
+} from '../types';
 
-const EXPIRES_IN = 7 * 24 * 60 * 60; // 7 days in seconds
+const DEFAULT_EXPIRES_IN = 7 * 24 * 60 * 60;
+type JwtPayloadInput =
+  | Omit<UserJwtPayload, 'exp' | 'iat'>
+  | Omit<AdminJwtPayload, 'exp' | 'iat'>
+  | Omit<AccessJwtPayload, 'exp' | 'iat'>;
 
 function b64url(data: ArrayBuffer): string {
   return btoa(String.fromCharCode(...new Uint8Array(data)))
@@ -31,11 +40,12 @@ async function importKey(secret: string): Promise<CryptoKey> {
 }
 
 export async function signJwt(
-  payload: Omit<JwtPayload, 'exp' | 'iat'>,
+  payload: JwtPayloadInput,
   secret: string,
+  expiresIn = DEFAULT_EXPIRES_IN,
 ): Promise<string> {
   const now = Math.floor(Date.now() / 1000);
-  const full: JwtPayload = { ...payload, iat: now, exp: now + EXPIRES_IN };
+  const full: JwtPayload = { ...payload, iat: now, exp: now + expiresIn } as JwtPayload;
   const header = b64urlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const body = b64urlEncode(JSON.stringify(full));
   const signing = `${header}.${body}`;
@@ -46,7 +56,9 @@ export async function signJwt(
 
 export async function verifyJwt(token: string, secret: string): Promise<JwtPayload> {
   const parts = token.split('.');
-  if (parts.length !== 3) throw new Error('invalid_token');
+  if (parts.length !== 3) {
+    throw new Error('invalid_token');
+  }
   const [header, body, sigB64] = parts;
   const signing = `${header}.${body}`;
   const key = await importKey(secret);
@@ -59,8 +71,12 @@ export async function verifyJwt(token: string, secret: string): Promise<JwtPaylo
     sigBytes,
     new TextEncoder().encode(signing),
   );
-  if (!valid) throw new Error('invalid_signature');
+  if (!valid) {
+    throw new Error('invalid_token');
+  }
   const payload: JwtPayload = JSON.parse(b64urlDecode(body));
-  if (payload.exp < Math.floor(Date.now() / 1000)) throw new Error('token_expired');
+  if (payload.exp < Math.floor(Date.now() / 1000)) {
+    throw new Error('token_expired');
+  }
   return payload;
 }

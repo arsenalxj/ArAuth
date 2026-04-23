@@ -24,6 +24,8 @@ export type UserRow = {
   token_version: number;
   created_at: string;
   updated_at: string;
+  active_sessions?: number;
+  last_seen_at?: string | null;
 };
 
 export type AdminRow = {
@@ -34,11 +36,46 @@ export type AdminRow = {
   created_at: string;
 };
 
-export type JwtPayload = {
-  sub: string;       // user id
+export type SessionRow = {
+  id: string;
+  user_id: number;
+  app_id: string;
+  refresh_token_hash: string;
+  status: 'active' | 'revoked';
+  device_name: string | null;
+  client_build: string | null;
+  last_seen_at: string | null;
+  expires_at: string;
+  revoked_at: string | null;
+  revoke_reason: string | null;
+  created_at: string;
+};
+
+export type UserJwtPayload = {
+  sub: string;
   username: string;
-  tv: number;        // token_version
-  type: 'user' | 'admin';
+  tv: number;
+  type: 'user';
   exp: number;
   iat: number;
 };
+
+export type AdminJwtPayload = {
+  sub: string;
+  username: string;
+  type: 'admin';
+  exp: number;
+  iat: number;
+};
+
+export type AccessJwtPayload = {
+  sub: string;
+  username: string;
+  sid: string;
+  aid: string;
+  type: 'access';
+  exp: number;
+  iat: number;
+};
+
+export type JwtPayload = UserJwtPayload | AdminJwtPayload | AccessJwtPayload;

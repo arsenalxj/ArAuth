@@ -8,6 +8,9 @@ binding = "DB"
 database_name = "auth-db"
 database_id = "eddb61a7-40e7-4f7c-a9ab-b17ae20db0db"
 
+[triggers]
+crons = ["0 3 * * *"]
+
 # Secrets (set via wrangler secret put):
 #   JWT_SECRET     — HMAC-SHA256 signing key
 #   ADMIN_INIT_KEY — one-time key to bootstrap first admin (optional)

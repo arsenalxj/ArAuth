@@ -1,40 +1,59 @@
-/// The authenticated user returned after login or register.
+/// Public user identity exposed by the SDK.
 class ArAuthUser {
   final int userId;
   final String username;
-  final String token;
-  final int expiresIn;
+  final String sessionId;
 
   const ArAuthUser({
     required this.userId,
     required this.username,
-    required this.token,
-    required this.expiresIn,
+    required this.sessionId,
   });
 
-  factory ArAuthUser.fromJson(Map<String, dynamic> json, String username) {
+  factory ArAuthUser.fromAuthJson(Map<String, dynamic> json) {
+    final user = json['user'] as Map<String, dynamic>;
     return ArAuthUser(
-      userId: json['user_id'] as int,
-      username: username,
-      token: json['token'] as String,
-      expiresIn: json['expires_in'] as int,
+      userId: user['user_id'] as int,
+      username: user['username'] as String,
+      sessionId: json['session_id'] as String,
+    );
+  }
+
+  factory ArAuthUser.fromStored({
+    required int userId,
+    required String username,
+    required String sessionId,
+  }) {
+    return ArAuthUser(userId: userId, username: username, sessionId: sessionId);
+  }
+
+  ArAuthUser copyWith({
+    int? userId,
+    String? username,
+    String? sessionId,
+  }) {
+    return ArAuthUser(
+      userId: userId ?? this.userId,
+      username: username ?? this.username,
+      sessionId: sessionId ?? this.sessionId,
     );
   }
 
   @override
-  String toString() => 'ArAuthUser(userId: $userId, username: $username)';
+  String toString() => 'ArAuthUser(userId: $userId, username: $username, sessionId: $sessionId)';
 }
 
-/// Result of token verification.
 class VerifyResult {
   final bool valid;
   final int userId;
   final String username;
+  final String sessionId;
 
   const VerifyResult({
     required this.valid,
     required this.userId,
     required this.username,
+    required this.sessionId,
   });
 
   factory VerifyResult.fromJson(Map<String, dynamic> json) {
@@ -42,6 +61,7 @@ class VerifyResult {
       valid: json['valid'] as bool,
       userId: json['user_id'] as int,
       username: json['username'] as String,
+      sessionId: json['session_id'] as String,
     );
   }
 }

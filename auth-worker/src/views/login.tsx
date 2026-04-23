@@ -55,7 +55,7 @@ body.is-login { display:flex; align-items:center; justify-content:center; min-he
               {error}
             </p>
           )}
-          <form method="POST" action="/admin/login">
+          <form method="post" action="/admin/login">
             <label>
               管理员账号
               <input
