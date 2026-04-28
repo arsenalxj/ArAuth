@@ -347,13 +347,11 @@ class ArAuth extends ChangeNotifier {
       return existing;
     }
 
-    final future = _performRefresh();
-    _refreshFuture = future.whenComplete(() {
-      if (identical(_refreshFuture, future)) {
-        _refreshFuture = null;
-      }
+    final future = _performRefresh().whenComplete(() {
+      _refreshFuture = null;
     });
-    return _refreshFuture!;
+    _refreshFuture = future;
+    return future;
   }
 
   Future<void> _performRefresh() async {

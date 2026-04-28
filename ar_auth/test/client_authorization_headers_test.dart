@@ -258,6 +258,24 @@ void main() {
       expect(storage.hasStoredSession, isFalse);
     });
 
+    test('clears refresh lock after completion so sequential calls each refresh', () async {
+      final storage = InMemoryTokenStorage();
+      final server = FakeAuthServer()
+        ..loginExpiresIn = 1
+        ..refreshExpiresIn = 1;
+      final auth = createAuth(storage: storage, server: server);
+
+      await auth.init();
+      await auth.login('alice', 'password');
+
+      await auth.buildAuthorizationHeaders(minValidity: const Duration(seconds: 30));
+      expect(server.refreshCalls, 1);
+
+      // Second sequential call: refreshed token also expired in 1s, so another refresh must fire.
+      await auth.buildAuthorizationHeaders(minValidity: const Duration(seconds: 30));
+      expect(server.refreshCalls, 2);
+    });
+
     test('throws NetworkException without clearing local state on refresh network failure', () async {
       final storage = InMemoryTokenStorage();
       final server = FakeAuthServer()
